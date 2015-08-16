@@ -320,22 +320,25 @@ class MACCommands
     public function showAlert($title, $msg)
     {
         $this->log->warn("Show Alert: $title: $msg");
-        $cmd = sprintf('osascript -e \'tell app "System Events" to display dialog "%s" with title "%s" with icon note buttons {"OK"} cancel button "OK"\' &> /dev/null &', $msg, $title);
-        shell_exec($cmd);
+        $cmd = sprintf('osascript -e \'tell app "System Events" to display dialog "%s" with title "%s" with icon note buttons {"OK"} cancel button "OK"\' 2>&1 &', $msg, $title);
+        $result = shell_exec($cmd);
+        $this->log->debug($result);
     }
 
     public function sleep()
     {
         $this->log->warn("Putting system to sleep.");
-        $cmd = 'osascript -e \'tell app "System Events" to sleep\' &> /dev/null &';
-        shell_exec($cmd);
+        $cmd = 'osascript -e \'tell app "System Events" to sleep\' 2>&1 &';
+        $result = shell_exec($cmd);
+        $this->log->debug($result);
     }
 
     public function logout()
     {
         $this->log->warn("Logout current user.");
-        $cmd = 'osascript -e \'tell application "loginwindow" to  «event aevtrlgo»\' &> /dev/null &';
-        shell_exec($cmd);
+        $cmd = 'osascript -e \'tell application "loginwindow" to  «event aevtrlgo»\' 2>&1 &';
+        $result = shell_exec($cmd);
+        $this->log->debug($result);
     }
 
     public function currentUser()
@@ -436,9 +439,9 @@ class TimeLimits
     }
 }
 
-$file = __DIR__.'/limits.php';
+$file = __DIR__ . '/limits.php';
 $limits = array();
-if(is_file($file)) {
+if (is_file($file)) {
     $limits = include($file);
 }
 $time = new TimeLimits($limits);
