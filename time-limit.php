@@ -394,25 +394,30 @@ class TimeLimits
 
     private $limits = array();
 
+    private $user;
+
     public function __construct($limits)
     {
+        $this->limits = $limits;
+
         $this->log = new Logger('limit', 'time-limit');
         $this->log->debug = true;
         $this->log->verbose = true;
 
-        $file = sprintf('sqlite:%s/time-limit.db', __DIR__);
-        $sqlite = new SimpleDB($file);
-        $sqlite->setLogger($this->log);
-
-        $this->time = new TimeLimitDB($sqlite);
-        $this->time->setLogger($this->log);
-        $this->time->init();
-
         $this->system = new MACCommands();
         $this->system->setLogger($this->log);
-        $this->system->setUser($this->system->currentUser());
+        $this->user = $this->system->currentUser();
+        $this->system->setUser($this->user);
 
-        $this->limits = $limits;
+        if($this->getLimit($this->user) !== false) {
+            $file = sprintf('sqlite:%s/time-limit.db', __DIR__);
+            $sqlite = new SimpleDB($file);
+            $sqlite->setLogger($this->log);
+
+            $this->time = new TimeLimitDB($sqlite);
+            $this->time->setLogger($this->log);
+            $this->time->init();
+        }
     }
 
     protected function getLimit($user)
@@ -430,11 +435,10 @@ class TimeLimits
 
     public function update()
     {
-        $user = $this->system->currentUser();
-        if (($limit = $this->getLimit($user)) !== false) {
-            $this->log->info("User $user has limits: " . implode(', ', $limit));
-            $this->time->addTime($user);
-            $usage = $this->time->getUsage($user);
+        if (($limit = $this->getLimit($this->user)) !== false) {
+            $this->log->info("User {$this->user} has limits: " . implode(', ', $limit));
+            $this->time->addTime($this->user);
+            $usage = $this->time->getUsage($this->user);
             $this->checkTimeLimit($limit, $usage);
         }
     }
