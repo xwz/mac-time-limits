@@ -326,7 +326,7 @@ class MACCommands
 
     public function showNotification($title, $msg)
     {
-        $this->log->warn("Show Alert: $title: $msg");
+        $this->log->warn("Show Notification: $title: $msg");
         $cmd = sprintf('osascript -e \'display notification "%s" with title "%s" sound name "Pop"\' 2>&1 &', $msg, $title);
         $this->cmd($cmd);
     }
