@@ -44,7 +44,7 @@ class Logger implements ILogger
             if (!$exists)
                 fwrite($this->_log, sprintf("Logging start: %s\n", date("r")));
         }
-        fwrite($this->_log, sprintf("[%s] %s\n", $this->name, trim($msg)));
+        fwrite($this->_log, sprintf("%s [%s] %s\n", date('Y-m-d H:i:s'), $this->name, trim($msg)));
         if ($this->verbose)
             echo trim($msg) . "\n";
         return 0;
@@ -77,13 +77,13 @@ class Logger implements ILogger
 
     public function debug($msg)
     {
-        $verbose = $this->verbose;
-        $this->verbose = false;
         if ($this->debug) {
+            $verbose = $this->verbose;
+            $this->verbose = false;
             echo $this->color(sprintf("%s\n", $msg), array(34));
+            $this->log($msg);
+            $this->verbose = $verbose;
         }
-        $this->log($msg);
-        $this->verbose = $verbose;
     }
 
     public function error($msg)
@@ -320,25 +320,30 @@ class MACCommands
     public function showAlert($title, $msg)
     {
         $this->log->warn("Show Alert: $title: $msg");
-        $cmd = sprintf('osascript -e \'tell app "System Events" to display dialog "%s" with title "%s" with icon note buttons {"OK"} cancel button "OK"\' 2>&1 &', $msg, $title);
-        $result = shell_exec($cmd);
-        $this->log->debug($result);
+        $cmd = sprintf('osascript -e \'tell app "System Events" to display dialog "%s" with title "%s" with icon note buttons {"OK"} cancel button "OK" giving up after 10\' 2>&1 &', $msg, $title);
+        $this->cmd($cmd);
+    }
+
+    public function showNotification($title, $msg)
+    {
+        $this->log->warn("Show Alert: $title: $msg");
+        $cmd = sprintf('osascript -e \'display notification "%s" with title "%s" sound name "Pop"\' 2>&1 &', $msg, $title);
+        $this->cmd($cmd);
     }
 
     public function sleep()
     {
         $this->log->warn("Putting system to sleep.");
         $cmd = 'osascript -e \'tell app "System Events" to sleep\' 2>&1 &';
-        $result = shell_exec($cmd);
-        $this->log->debug($result);
+        $this->cmd($cmd);
+
     }
 
     public function logout()
     {
         $this->log->warn("Logout current user.");
         $cmd = 'osascript -e \'tell application "loginwindow" to  «event aevtrlgo»\' 2>&1 &';
-        $result = shell_exec($cmd);
-        $this->log->debug($result);
+        $this->cmd($cmd);
     }
 
     public function currentUser()
@@ -348,6 +353,14 @@ class MACCommands
         $data = explode(' ', $result);
         $this->log->debug("Found '{$data[3]}' from '$result");
         return $data[3];
+    }
+
+    protected function cmd($cmd)
+    {
+        $this->log->debug($cmd);
+        $result = shell_exec($cmd);
+        $this->log->debug($result);
+        return $result;
     }
 }
 
@@ -367,7 +380,7 @@ class TimeLimits
     public function __construct($limits)
     {
         $this->log = new Logger('limit', 'time-limit');
-        $this->log->debug = true;
+        $this->log->debug = false;
         $this->log->verbose = true;
 
         $file = sprintf('sqlite:%s/time-limit.db', __DIR__);
@@ -421,7 +434,9 @@ class TimeLimits
             $msg = "Today’s usage limit of $maxDuration has expired. System will logout in 30 seconds.";
         }
         if ($msg) {
-            $this->system->showAlert("System Usage Time Limit", $msg);
+            $title = 'System Usage Time Limit';
+            $this->system->showNotification($title, $msg);
+            $this->system->showAlert($title, $msg);
             sleep(30);
             $this->system->logout();
         }
@@ -431,9 +446,9 @@ class TimeLimits
     {
         $title = 'System Usage Time Limit';
         $minutesDurationRemain = $maxMinutes - $usage;
-        $this->log->debug("Duration remaining: $minutesDurationRemain minutes. Time expires in $expire minutes.");
+        $this->log->info("Duration remaining: $minutesDurationRemain minutes. Time expires in $expire minutes.");
         $remain = min($minutesDurationRemain, $expire);
-        if (($remain <= 30 && $remain > 0 && $remain % 5 === 0) || $remain === 1) {
+        if (($remain <= 30 && $remain > 0 && $remain % 5 == 0) || $remain == 1) {
             $this->system->showAlert($title, "{$remain} minutes remaining.");
         }
     }
