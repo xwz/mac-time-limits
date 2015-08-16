@@ -306,6 +306,7 @@ class MACCommands
 {
     /** @var ILogger */
     private $log;
+    private $user;
 
     public function __construct()
     {
@@ -317,9 +318,15 @@ class MACCommands
         $this->log = $log;
     }
 
+    public function setUser($user)
+    {
+        $this->user = $user;
+    }
+
     public function showAlert($title, $msg)
     {
         $this->showNotification($title, $msg);
+        $this->say($msg);
         $this->log->warn("Show Alert: $title: $msg");
         $cmd = sprintf('osascript -e \'tell app "System Events" to display dialog "%s" with title "%s" with icon note buttons {"OK"} cancel button "OK" giving up after 5\' 2>&1 &', $msg, $title);
         $this->cmd($cmd);
@@ -347,6 +354,12 @@ class MACCommands
         $this->cmd($cmd);
     }
 
+    public function say($msg)
+    {
+        $cmd = sprintf('say "%s"', $msg);
+        $this->cmd($cmd);
+    }
+
     public function currentUser()
     {
         $cmd = 'ls -l /dev/console';
@@ -358,6 +371,9 @@ class MACCommands
 
     protected function cmd($cmd)
     {
+        if ($this->user) {
+            $cmd = sprintf('sudo -u %s %s', $this->user, $cmd);
+        }
         $this->log->debug($cmd);
         $result = shell_exec($cmd);
         $this->log->debug($result);
@@ -394,6 +410,7 @@ class TimeLimits
 
         $this->system = new MACCommands();
         $this->system->setLogger($this->log);
+        $this->system->setUser($this->system->currentUser());
 
         $this->limits = $limits;
     }
