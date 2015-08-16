@@ -118,12 +118,12 @@ class Logger implements ILogger
 
     protected function getLogFile()
     {
-        return sprintf('%s-%s.log', $this->file, date('Ymd'));
+        return sprintf('%s/%s-%s.log', __DIR__, $this->file, date('Ymd'));
     }
 
     protected function getErrorLogFile()
     {
-        return sprintf('%s-error-%s.log', $this->file, date('Ymd'));
+        return sprintf('%s/%s-error-%s.log', __DIR__, $this->file, date('Ymd'));
     }
 }
 
@@ -364,7 +364,8 @@ class TimeLimits
         $this->log->debug = true;
         $this->log->verbose = true;
 
-        $sqlite = new SimpleDB('sqlite:time-limit.db');
+        $file = sprintf('sqlite:%s/time-limit.db', __DIR__);
+        $sqlite = new SimpleDB($file);
         $sqlite->setLogger($this->log);
 
         $this->time = new TimeLimitDB($sqlite);
