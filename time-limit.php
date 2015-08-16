@@ -430,21 +430,16 @@ class TimeLimits
         $minutesDurationRemain = $maxMinutes - $usage;
         $this->log->debug("Duration remaining: $minutesDurationRemain minutes. Time expires in $expire minutes.");
         $remain = min($minutesDurationRemain, $expire);
-        if ($remain <= 30 && $remain > 0 && $remain % 5 === 0) {
+        if (($remain <= 30 && $remain > 0 && $remain % 5 === 0) || $remain === 1) {
             $this->system->showAlert($title, "{$remain} minutes remaining.");
         }
     }
 }
 
-$limits['wei'] = array(
-    array('Mon', '5 hours', '9:30 pm'),
-    array('Tue', '5 hours', '9:30 pm'),
-    array('Wed', '5 hours', '9:30 pm'),
-    array('Thu', '5 hours', '9:30 pm'),
-    array('Fri', '5 hours', '9:30 pm'),
-    array('Sat', '3 hours', '9:30 pm'),
-    array('Sun', '3 hours', '9:30 pm'),
-);
-
+$file = __DIR__.'/limits.php';
+$limits = array();
+if(is_file($file)) {
+    $limits = include($file);
+}
 $time = new TimeLimits($limits);
 $time->update();
