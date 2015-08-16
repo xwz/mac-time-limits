@@ -321,13 +321,13 @@ class MACCommands
     {
         $this->showNotification($title, $msg);
         $this->log->warn("Show Alert: $title: $msg");
-        $cmd = sprintf('osascript -e \'tell app "System Events" to display dialog "%s" with title "%s" with icon note buttons {"OK"} cancel button "OK" giving up after 10\' 2>&1 &', $msg, $title);
+        $cmd = sprintf('osascript -e \'tell app "System Events" to display dialog "%s" with title "%s" with icon note buttons {"OK"} cancel button "OK" giving up after 5\' 2>&1 &', $msg, $title);
         $this->cmd($cmd);
     }
 
     public function showNotification($title, $msg)
     {
-        $this->log->warn("Show Notification: $title: $msg");
+        $this->log->info("Show Notification: $title: $msg");
         $cmd = sprintf('osascript -e \'display notification "%s" with title "%s" sound name "Pop"\' 2>&1 &', $msg, $title);
         $this->cmd($cmd);
     }
@@ -437,7 +437,7 @@ class TimeLimits
         if ($msg) {
             $title = 'System Usage Time Limit';
             $this->system->showAlert($title, $msg);
-            sleep(20);
+            sleep(25);
             $this->system->logout();
         }
     }
