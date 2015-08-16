@@ -319,18 +319,21 @@ class MACCommands
 
     public function showAlert($title, $msg)
     {
+        $this->log->warn("Show Alert: $title: $msg");
         $cmd = sprintf('osascript -e \'tell app "System Events" to display dialog "%s" with title "%s" with icon note buttons {"OK"} cancel button "OK"\' &> /dev/null &', $msg, $title);
         shell_exec($cmd);
     }
 
     public function sleep()
     {
+        $this->log->warn("Putting system to sleep.");
         $cmd = 'osascript -e \'tell app "System Events" to sleep\' &> /dev/null &';
         shell_exec($cmd);
     }
 
     public function logout()
     {
+        $this->log->warn("Logout current user.");
         $cmd = 'osascript -e \'tell application "loginwindow" to  «event aevtrlgo»\' &> /dev/null &';
         shell_exec($cmd);
     }
@@ -408,18 +411,13 @@ class TimeLimits
         $maxMinutes = round((strtotime($maxDuration) - time()) / 60);
         $expire = round((strtotime($expireTime) - time()) / 60);
         $this->showWarning($expire, $maxMinutes, $usage);
-        $msg = '';
-        $sleep = false;
+        $msg = false;
         if ($expire <= 0) {
             $msg = "Today’s limit of $expireTime has ended. System will logout in 30 seconds.";
-            $sleep = true;
-            $this->log->warn($msg);
         } else if ($usage >= $maxMinutes) {
             $msg = "Today’s usage limit of $maxDuration has expired. System will logout in 30 seconds.";
-            $sleep = true;
-            $this->log->warn($msg);
         }
-        if ($sleep) {
+        if ($msg) {
             $this->system->showAlert("System Usage Time Limit", $msg);
             sleep(30);
             $this->system->logout();
