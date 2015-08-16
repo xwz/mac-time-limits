@@ -328,21 +328,21 @@ class MACCommands
         $this->showNotification($title, $msg);
         $this->say($msg);
         $this->log->warn("Show Alert: $title: $msg");
-        $cmd = sprintf('osascript -e \'tell app "System Events" to display dialog "%s" with title "%s" with icon note buttons {"OK"} cancel button "OK" giving up after 5\' 2>&1 &', $msg, $title);
+        $cmd = sprintf('osascript -e \'tell app "System Events" to display dialog "%s" with title "%s" with icon note buttons {"OK"} cancel button "OK" giving up after 5\' 2>&1', $msg, $title);
         $this->cmd($cmd);
     }
 
     public function showNotification($title, $msg)
     {
         $this->log->info("Show Notification: $title: $msg");
-        $cmd = sprintf('osascript -e \'display notification "%s" with title "%s" sound name "Pop"\' 2>&1 &', $msg, $title);
+        $cmd = sprintf('osascript -e \'display notification "%s" with title "%s" sound name "Pop"\' 2>&1', $msg, $title);
         $this->cmd($cmd);
     }
 
     public function sleep()
     {
         $this->log->warn("Putting system to sleep.");
-        $cmd = 'osascript -e \'tell app "System Events" to sleep\' 2>&1 &';
+        $cmd = 'osascript -e \'tell app "System Events" to sleep\' 2>&1';
         $this->cmd($cmd);
 
     }
@@ -350,7 +350,7 @@ class MACCommands
     public function logout()
     {
         $this->log->warn("Logout current user.");
-        $cmd = 'osascript -e \'tell application "loginwindow" to  «event aevtrlgo»\' 2>&1 &';
+        $cmd = 'osascript -e \'tell application "loginwindow" to  «event aevtrlgo»\' 2>&1';
         $this->cmd($cmd);
     }
 
@@ -397,7 +397,7 @@ class TimeLimits
     public function __construct($limits)
     {
         $this->log = new Logger('limit', 'time-limit');
-        $this->log->debug = false;
+        $this->log->debug = true;
         $this->log->verbose = true;
 
         $file = sprintf('sqlite:%s/time-limit.db', __DIR__);
