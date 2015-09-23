@@ -350,6 +350,12 @@ class MACCommands
     public function logout()
     {
         $this->log->warn("Logout current user.");
+        if ($this->user) {
+            $kill = sprintf('ps aux | grep Application | grep \'^%s\' | awk \'{print $2}\' | xargs sudo -u %s kill', $this->user, $this->user);
+            $result = trim(shell_exec($kill));
+            $this->log->debug("Kill process $result");
+        }
+        sleep(2);
         $cmd = 'osascript -e \'tell application "loginwindow" to  «event aevtrlgo»\' 2>&1';
         $this->cmd($cmd);
     }
@@ -443,6 +449,11 @@ class TimeLimits
         }
     }
 
+    public function plot()
+    {
+
+    }
+
     protected function checkTimeLimit($limit, $usage)
     {
         list($day, $maxDuration, $expireTime) = $limit;
@@ -481,4 +492,8 @@ if (is_file($file)) {
     $limits = include($file);
 }
 $time = new TimeLimits($limits);
-$time->update();
+if(isset($argv[1]) && $argv[1] === 'plot') {
+    $time->plot();
+} else {
+    $time->update();
+}
