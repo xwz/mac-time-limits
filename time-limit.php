@@ -355,7 +355,6 @@ class MACCommands
             $result = trim(shell_exec($kill));
             $this->log->debug("Kill process $result");
         }
-        sleep(2);
         $cmd = 'osascript -e \'tell application "loginwindow" to  «event aevtrlgo»\' 2>&1';
         $this->cmd($cmd);
     }
@@ -373,6 +372,14 @@ class MACCommands
         $data = explode(' ', $result);
         $this->log->debug("Found '{$data[3]}' from '$result");
         return $data[3];
+    }
+
+    public function writeStatus($msg)
+    {
+        if($this->user) {
+            $cmd = "echo $msg | sudo -u {$this->user} tee /Users/{$this->user}/time-limit.log";
+            $result = trim(shell_exec($cmd));
+        }
     }
 
     protected function cmd($cmd)
@@ -478,7 +485,9 @@ class TimeLimits
     {
         $title = 'System Usage Time Limit';
         $minutesDurationRemain = $maxMinutes - $usage;
-        $this->log->info("Duration remaining: $minutesDurationRemain minutes. Time expires in $expire minutes.");
+        $msg = "Duration remaining: $minutesDurationRemain minutes. Time expires in $expire minutes.";
+        $this->log->info($msg);
+        $this->system->writeStatus($msg);
         $remain = min($minutesDurationRemain, $expire);
         if (($remain <= 30 && $remain > 0 && $remain % 5 == 0) || $remain == 1) {
             $this->system->showAlert($title, "{$remain} minutes remaining.");
