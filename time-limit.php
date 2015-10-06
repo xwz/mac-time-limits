@@ -300,6 +300,41 @@ class TimeLimitDB
         );
         return intval($this->db->queryScalar($sql, $params));
     }
+
+    public function getDailyUsage($user)
+    {
+        $sql = 'SELECT COUNT(*) AS minutes, day FROM usage WHERE user = :user GROUP BY day ORDER BY day ASC';
+        $params = array(
+            ':user' => $user,
+        );
+        $data = array();
+        $first = null;
+        $last = null;
+        foreach ($this->db->queryAll($sql, $params) as $row) {
+            $day = $row['day'];
+            if ($first === null) {
+                $first = strtotime($day);
+            }
+            $last = strtotime($day);
+            $data[$day] = intval($row['minutes']);
+        }
+        $results = $this->generateDates($first, $last);
+        foreach (array_keys($results) as $day) {
+            if (isset($data[$day])) {
+                $results[$day] = $data[$day];
+            }
+        }
+        return $results;
+    }
+
+    protected function generateDates($begin, $end, $incr = 86400, $format = 'Y-m-d')
+    {
+        $dates = array();
+        for ($time = $begin; $time <= $end; $time += $incr) {
+            $dates[date($format, $time)] = null;
+        }
+        return $dates;
+    }
 }
 
 class MACCommands
@@ -376,8 +411,8 @@ class MACCommands
 
     public function writeStatus($msg)
     {
-        if($this->user) {
-            $cmd = "echo $msg | sudo -u {$this->user} tee /Users/{$this->user}/time-limit.log";
+        if ($this->user) {
+            $cmd = "echo $msg | sudo -u {$this->user} tee /Users/{$this->user}/Documents/time-limit.log";
             $result = trim(shell_exec($cmd));
         }
     }
@@ -422,7 +457,7 @@ class TimeLimits
         $this->user = $this->system->currentUser();
         $this->system->setUser($this->user);
 
-        if($this->getLimit($this->user) !== false) {
+        if ($this->getLimit($this->user) !== false) {
             $file = sprintf('sqlite:%s/time-limit.db', __DIR__);
             $sqlite = new SimpleDB($file);
             $sqlite->setLogger($this->log);
@@ -456,9 +491,14 @@ class TimeLimits
         }
     }
 
-    public function plot()
+    public function plot($user)
     {
-
+        if ($this->time != null) {
+            $graph = new ChartPlotter($this->time, $user);
+            $graph->render();
+        } else {
+            $this->log->error("{$this->user} has no limits to show");
+        }
     }
 
     protected function checkTimeLimit($limit, $usage)
@@ -495,14 +535,110 @@ class TimeLimits
     }
 }
 
+class ChartPlotter
+{
+    /** @var TimeLimitDB */
+    private $time;
+    private $user;
+
+    public function __construct($db, $user)
+    {
+        $this->time = $db;
+        $this->user = $user;
+    }
+
+    protected function header()
+    {
+        return <<<HTML
+<html>
+<head>
+<style>
+    html, body {
+        font-family: "Lucida Grande", "Lucida Sans Unicode", Arial, Helvetica, sans-serif;
+    }
+</style>
+<script type='text/javascript' src='http://code.jquery.com/jquery-1.9.1.js'></script>
+<script src="http://code.highcharts.com/highcharts.js"></script>
+</head>
+<body>
+HTML;
+    }
+
+    protected function footer()
+    {
+        return <<<HTML
+</body>
+</html>
+HTML;
+    }
+
+    protected function dailyUsage()
+    {
+        $usage = $this->time->getDailyUsage($this->user);
+        if (count($usage) === 0) {
+            return '';
+        }
+        $date = getdate(strtotime(key($usage)));
+        $year = $date['year'];
+        $month = $date['mon'] - 1;
+        $day = $date['mday'];
+        $data = json_encode(array_values($usage));
+        return <<<HTML
+    <h1>Daily Usage for {$this->user}</h1>
+    <div id="daily"></div>
+    <script type="text/javascript">
+var daily = {
+    'chart': {
+        'renderTo': 'daily',
+        'type': 'column'
+    },
+    'credits': {
+        'enabled': false
+    },
+    'title': {
+        'text': null
+    },
+    'xAxis': {
+        'type': 'datetime'
+    },
+    'yAxis': {
+        'title': {
+            'text': 'Minutes'
+        },
+        'min': 0
+    },
+    'series': [{
+        'data': $data,
+        'pointStart': Date.UTC({$year}, {$month}, {$day}),
+        'pointInterval': 86400000,
+        'name': 'Minutes',
+        'step': 'right'
+    }]
+};
+         new Highcharts.Chart(daily);
+    </script>
+HTML;
+    }
+
+    public function render()
+    {
+        $html = $this->header();
+        $html .= $this->dailyUsage();
+        $html .= $this->footer();
+        $file = __DIR__ . '/time.html';
+        file_put_contents($file, $html);
+        shell_exec("open $file&");
+    }
+}
+
 $file = __DIR__ . '/limits.php';
 $limits = array();
 if (is_file($file)) {
     $limits = include($file);
 }
 $time = new TimeLimits($limits);
-if(isset($argv[1]) && $argv[1] === 'plot') {
-    $time->plot();
+if (isset($argv[1])) {
+    $time->plot($argv[1]);
 } else {
     $time->update();
 }
